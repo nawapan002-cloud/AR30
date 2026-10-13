@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ภารกิจส่งนักบินอวกาศ - ฝึกตรรกะเชิงลำดับ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .drag-card {
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+        .drag-card:active {
+            cursor: grabbing;
+        }
+        .drag-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); }
+        }
+        .rocket-glow {
+            animation: pulse-glow 3s infinite;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-4 md:p-8">
+
+    <header class="w-full max-w-4xl text-center mb-6">
+        <div class="inline-block px-4 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-sm font-semibold mb-3">
+            <i class="fa-solid fa-rocket mr-2"></i> ฝึกทักษะ Sequential Logic (ตรรกะเชิงลำดับ)
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+            ภารกิจส่งนักบินอวกาศ
+        </h1>
+        <p class="text-gray-300 text-sm md:text-base mt-2 max-w-2xl mx-auto">
+            การปล่อยจรวดมีขั้นตอนที่สำคัญและสลับกันไม่ได้! จงเรียงลำดับเหตุการณ์ทั้ง 4 ด่านให้ถูกต้องตามขั้นตอนภารกิจอวกาศ
+        </p>
+    </header>
+
+    <main class="w-full max-w-4xl glass-panel rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden mb-6">
+        
+        <!-- Score & Progress Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-700/60 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/30 flex items-center justify-center text-purple-300 font-bold">
+                    <span id="score-display">0</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-gray-200">ความคืบหน้าลำดับภารกิจ</h3>
+                    <p class="text-xs text-gray-400" id="status-text">ลากการ์ดมาวางเรียงลำดับในช่องด้านล่าง (1 ไป 4)</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="resetGame()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-sm transition flex items-center gap-2 border border-slate-600">
+                    <i class="fa-solid fa-rotate-right"></i> เริ่มใหม่
+                </button>
+                <button onclick="checkAnswer()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 transition flex items-center gap-2">
+                    <i class="fa-solid fa-check-circle"></i> ตรวจสอบลำดับ
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Play Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Available Cards Pool (Unordered / Scrambled) -->
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-shuffle text-yellow-400"></i> การ์ดภารกิจที่ต้องเรียง (สลับกันอยู่)
+                </h4>
+                <div id="source-container" class="space-y-3 min-h-[380px] p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col justify-center">
+                    <!-- Cards will be injected via JS -->
+                </div>
+            </div>
+
+            <!-- Target Drop Slots (1 to 4) -->
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-blue-400"></i> ช่องเรียงลำดับภารกิจ (ขั้นที่ 1 ถึง 4)
+                </h4>
+                <div id="target-container" class="space-y-3 min-h-[380px] p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <!-- Drop slots will be injected via JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Success Celebration Overlay / Modal Box -->
+        <div id="success-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-50 transition-all duration-300">
+            <div class="w-20 h-20 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-green-400 text-4xl mb-4 rocket-glow">
+                <i class="fa-solid fa-rocket"></i>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">ภารกิจสำเร็จลุล่วง! 🚀</h2>
+            <p class="text-gray-300 max-w-md text-sm md:text-base mb-6">
+                ยอดเยี่ยมมาก! คุณเข้าใจตรรกะเชิงลำดับ (Sequential Logic) ของภารกิจอวกาศได้อย่างถูกต้อง การเดินขึ้นจรวด เข้าห้องนักบิน นับถอยหลัง และพุ่งทะยาน เกิดขึ้นตามขั้นตอนที่สมบูรณ์แบบ
+            </p>
+            <button onclick="resetGame()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold shadow-lg shadow-green-600/30 transition flex items-center gap-2">
+                <i class="fa-solid fa-play"></i> เล่นอีกครั้ง
+            </button>
+        </div>
+
+        <!-- Message Box (Custom non-alert notification) -->
+        <div id="message-box" class="hidden mt-4 p-4 rounded-xl text-sm font-medium flex items-center gap-3 transition-all duration-200">
+            <i id="msg-icon" class="fa-solid text-lg"></i>
+            <span id="msg-text"></span>
+        </div>
+
+    </main>
+
+    <footer class="text-center text-xs text-gray-400 pb-2">
+        พัฒนาสำหรับสื่อการสอน Coding & Sequential Logic | สไตล์ Flat Design เน้นความเข้าใจตรรกะ
+    </footer>
+
+    <script>
+        // Mission Data definition with Flat Design style SVG Illustrations
+        const missions = [
+            {
+                id: 1,
+                correctStep: 1,
+                title: "ด่านที่ 1: เดินขึ้นบันไดจรวด",
+                desc: "ภาพการ์ตูนนักบินอวกาศในชุดเต็มยศ กำลังเดินขึ้นบันไดไปยังประตูจรวด",
+                svg: `<svg viewBox="0 0 160 100" class="w-full h-28 rounded-lg bg-gradient-to-b from-sky-900 to-indigo-950 object-cover">
+                    <!-- Sky background & stars -->
+                    <circle cx="20" cy="20" r="1.5" fill="#ffffff" opacity="0.8"/>
+                    <circle cx="80" cy="15" r="1" fill="#ffffff" opacity="0.6"/>
+                    <circle cx="130" cy="25" r="1.5" fill="#ffffff" opacity="0.9"/>
+                    <!-- Rocket Body (Silver/White) -->
+                    <path d="M100 10 C100 10 120 40 120 75 L120 95 L80 95 L80 75 C80 40 100 10 100 10Z" fill="#e2e8f0"/>
+                    <path d="M100 12 C100 12 115 38 115 70 L85 70 C85 38 100 12 100 12Z" fill="#cbd5e1"/>
+                    <!-- Red Stripe / Logo -->
+                    <path d="M82 50 L118 50 L118 60 L82 60 Z" fill="#ef4444"/>
+                    <!-- Gantry / Stairs Structure -->
+                    <rect x="30" y="30" width="8" height="65" fill="#64748b"/>
+                    <rect x="50" y="35" width="8" height="60" fill="#64748b"/>
+                    <!-- Stairs steps -->
+                    <line x1="38" y1="45" x2="50" y2="48" stroke="#94a3b8" stroke-width="3"/>
+                    <line x1="38" y1="60" x2="50" y2="63" stroke="#94a3b8" stroke-width="3"/>
+                    <line x1="38" y1="75" x2="50" y2="78" stroke="#94a3b8" stroke-width="3"/>
+                    <!-- Connecting bridge to rocket -->
+                    <rect x="58" y="70" width="24" height="6" fill="#475569"/>
+                    <!-- Astronaut walking -->
+                    <circle cx="62" cy="58" r="5" fill="#ffffff"/> <!-- Helmet -->
+                    <rect x="59" y="63" width="6" height="9" rx="2" fill="#ffffff"/> <!-- Suit -->
+                    <path d="M60 72 L58 80" stroke="#ffffff" stroke-width="2"/> <!-- Leg -->
+                    <path d="M64 72 L66 80" stroke="#ffffff" stroke-width="2"/> <!-- Leg -->
+                </svg>`
+            },
+            {
+                id: 2,
+                correctStep: 2,
+                title: "ด่านที่ 2: นั่งประจำที่ห้องนักบิน",
+                desc: "ภาพภายในห้องนักบิน กำลังนั่งเก้าอี้คาดเข็มขัดนิรภัย มีแผงควบคุม",
+                svg: `<svg viewBox="0 0 160 100" class="w-full h-28 rounded-lg bg-gradient-to-b from-slate-900 to-slate-950 object-cover">
+                    <!-- Control panel background -->
+                    <rect x="10" y="45" width="140" height="50" rx="4" fill="#1e293b" stroke="#334155"/>
+                    <!-- Dashboard screens & buttons -->
+                    <rect x="20" y="55" width="30" height="20" rx="2" fill="#0284c7"/>
+                    <circle cx="70" cy="65" r="8" fill="#22c55e"/>
+                    <circle cx="95" cy="65" r="8" fill="#eab308"/>
+                    <circle cx="120" cy="65" r="8" fill="#ef4444"/>
+                    <!-- Radar line -->
+                    <line x1="20" y1="65" x2="50" y2="65" stroke="#38bdf8" stroke-width="2"/>
+                    <line x1="35" y1="55" x2="35" y2="75" stroke="#38bdf8" stroke-width="2"/>
+                    <!-- Astronaut seat & helmet view -->
+                    <path d="M65 20 C65 10 95 10 95 20 L90 50 C90 50 65 50 65 20 Z" fill="#334155"/>
+                    <!-- Helmet visor -->
+                    <ellipse cx="80" cy="28" rx="10" ry="7" fill="#fde047" opacity="0.9"/>
+                    <!-- Seat back -->
+                    <path d="M55 15 C55 10 105 10 105 15 L105 50 L55 50 Z" fill="#0f172a" opacity="0.8"/>
+                </svg>`
+            },
+            {
+                id: 3,
+                correctStep: 3,
+                title: "ด่านที่ 3: นับถอยหลังบนฐานปล่อย",
+                desc: "ภาพจรวดตั้งตรงบนฐาน พร้อมหน้าจอดิจิทัลแสดง 3, 2, 1",
+                svg: `<svg viewBox="0 0 160 100" class="w-full h-28 rounded-lg bg-gradient-to-b from-indigo-950 to-slate-900 object-cover">
+                    <!-- Digital countdown screen in sky -->
+                    <rect x="20" y="15" width="40" height="25" rx="4" fill="#0f172a" stroke="#ef4444" stroke-width="1.5"/>
+                    <text x="40" y="33" font-family="monospace" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">3 2 1</text>
+                    <!-- Launch tower -->
+                    <rect x="110" y="20" width="6" height="75" fill="#475569"/>
+                    <line x1="90" y1="35" x2="110" y2="35" stroke="#64748b" stroke-width="2"/>
+                    <line x1="90" y1="60" x2="110" y2="60" stroke="#64748b" stroke-width="2"/>
+                    <!-- Rocket upright -->
+                    <path d="M75 10 C75 10 90 30 90 70 L90 90 L60 90 L60 70 C60 30 75 10 75 10Z" fill="#f8fafc"/>
+                    <path d="M75 12 C75 12 87 32 87 65 L63 65 C63 32 75 12 75 12Z" fill="#3b82f6"/>
+                    <!-- Launch platform base -->
+                    <rect x="45" y="90" width="60" height="6" rx="2" fill="#334155"/>
+                </svg>`
+            },
+            {
+                id: 4,
+                correctStep: 4,
+                title: "ด่านที่ 4: พุ่งทะยานสู่อวกาศ",
+                desc: "ภาพจรวดกำลังพุ่งทะยานขึ้นสู่ท้องฟ้า มีควันและเปลวไฟพุ่งออก",
+                svg: `<svg viewBox="0 0 160 100" class="w-full h-28 rounded-lg bg-gradient-to-b from-blue-950 via-indigo-950 to-orange-950 object-cover">
+                    <!-- Stars -->
+                    <circle cx="30" cy="20" r="1" fill="#ffffff" opacity="0.8"/>
+                    <circle cx="130" cy="15" r="1.5" fill="#ffffff" opacity="0.6"/>
+                    <!-- Rocket soaring up diagonally -->
+                    <g transform="translate(15, -5) rotate(15 80 50)">
+                        <path d="M80 15 C80 15 95 35 95 70 L95 85 L65 85 L65 70 C65 35 80 15 80 15Z" fill="#f8fafc"/>
+                        <path d="M80 17 C80 17 92 37 92 65 L68 65 C68 37 80 17 80 17Z" fill="#ef4444"/>
+                    </g>
+                    <!-- Fire & Smoke exhaust at bottom left -->
+                    <path d="M55 75 C45 80 30 85 20 95 C35 92 50 85 60 80 Z" fill="#f97316"/>
+                    <path d="M57 78 C48 83 40 88 30 98 C42 94 52 88 62 83 Z" fill="#facc15"/>
+                    <circle cx="20" cy="95" r="8" fill="#94a3b8" opacity="0.5"/>
+                    <circle cx="12" cy="98" r="6" fill="#cbd5e1" opacity="0.4"/>
+                </svg>`
+            }
+        ];
+
+        let sourceMissions = [];
+        let targetSlots = [null, null, null, null];
+        let score = 0;
+
+        // Shuffle helper
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initGame() {
+            sourceMissions = shuffleArray(missions);
+            targetSlots = [null, null, null, null];
+            document.getElementById('success-modal').classList.add('hidden');
+            hideMessage();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const sourceContainer = document.getElementById('source-container');
+            const targetContainer = document.getElementById('target-container');
+
+            sourceContainer.innerHTML = '';
+            targetContainer.innerHTML = '';
+
+            // Render source cards
+            if (sourceMissions.length === 0) {
+                sourceContainer.innerHTML = `<div class="text-center text-gray-500 text-sm py-12"><i class="fa-solid fa-circle-check text-green-500 text-2xl mb-2 block"></i> ลากการ์ดครบทุกช่องแล้ว! กดปุ่ม "ตรวจสอบลำดับ" ด้านบนได้เลย</div>`;
+            } else {
+                sourceMissions.forEach((mission, index) => {
+                    const card = createCardElement(mission, 'source', index);
+                    sourceContainer.appendChild(card);
+                });
+            }
+
+            // Render 4 target slots
+            for (let i = 0; i < 4; i++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = "flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700/80 min-h-[85px] transition-all";
+                slotDiv.dataset.index = i;
+
+                // Slot number badge
+                const badge = document.createElement('div');
+                badge.className = "w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-400/30 flex items-center justify-center font-bold text-blue-300 text-sm shrink-0 mr-3";
+                badge.innerText = i + 1;
+                slotDiv.appendChild(badge);
+
+                if (targetSlots[i]) {
+                    // Render card inside slot
+                    const mission = targetSlots[i];
+                    const card = createCardElement(mission, 'target', i);
+                    card.classList.add('w-full');
+                    slotDiv.appendChild(card);
+                } else {
+                    // Empty slot placeholder
+                    const placeholder = document.createElement('div');
+                    placeholder.className = "flex-1 border-2 border-dashed border-slate-700 rounded-lg p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2";
+                    placeholder.innerHTML = `<i class="fa-solid fa-hand-pointer"></i> วางการ์ดลำดับที่ ${i + 1} ที่นี่`;
+                    
+                    // Allow drop on empty slot
+                    slotDiv.addEventListener('dragover', (e) => e.preventDefault());
+                    slotDiv.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        handleDrop(data, i);
+                    });
+
+                    slotDiv.appendChild(placeholder);
+                }
+
+                targetContainer.appendChild(slotDiv);
+            }
+        }
+
+        function createCardElement(mission, origin, index) {
+            const card = document.createElement('div');
+            card.className = "drag-card bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 rounded-xl p-3 flex items-center gap-3 shadow-md w-full";
+            card.draggable = true;
+
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ id: mission.id, origin, index }));
+                card.classList.add('dragging');
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+
+            // Thumbnail / SVG container
+            const thumb = document.createElement('div');
+            thumb.className = "w-20 h-14 shrink-0 rounded overflow-hidden border border-slate-700";
+            thumb.innerHTML = mission.svg;
+
+            // Info container
+            const info = document.createElement('div');
+            info.className = "flex-1 min-w-0";
+            info.innerHTML = `
+                <h5 class="font-bold text-sm text-white truncate">${mission.title}</h5>
+                <p class="text-xs text-gray-300 line-clamp-1 mt-0.5">${mission.desc}</p>
+            `;
+
+            // Action button to move back and forth quickly (for mobile / click support)
+            const actionBtn = document.createElement('button');
+            actionBtn.className = "w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-600 text-gray-300 flex items-center justify-center text-xs shrink-0 transition";
+            actionBtn.innerHTML = origin === 'source' ? '<i class="fa-solid fa-arrow-right"></i>' : '<i class="fa-solid fa-arrow-left"></i>';
+            actionBtn.title = origin === 'source' ? "ย้ายไปช่องว่าง" : "นำกลับ";
+            actionBtn.onclick = (e) => {
+                e.stopPropagation();
+                quickMove(mission, origin, index);
+            };
+
+            card.appendChild(thumb);
+            card.appendChild(info);
+            card.appendChild(actionBtn);
+
+            // Allow source container to accept dropped items back
+            const sourceContainer = document.getElementById('source-container');
+            sourceContainer.ondragover = (e) => e.preventDefault();
+            sourceContainer.ondrop = (e) => {
+                e.preventDefault();
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.origin === 'target') {
+                    targetSlots[data.index] = null;
+                    sourceMissions.push(mission);
+                    renderBoard();
+                }
+            };
+
+            return card;
+        }
+
+        function handleDrop(data, targetSlotIndex) {
+            let mission;
+            if (data.origin === 'source') {
+                const srcIdx = sourceMissions.findIndex(m => m.id === data.id);
+                mission = sourceMissions.splice(srcIdx, 1)[0];
+            } else {
+                mission = targetSlots[data.index];
+                targetSlots[data.index] = null;
+            }
+
+            // If target slot already has a card, send it back to source
+            if (targetSlots[targetSlotIndex]) {
+                sourceMissions.push(targetSlots[targetSlotIndex]);
+            }
+
+            targetSlots[targetSlotIndex] = mission;
+            renderBoard();
+        }
+
+        function quickMove(mission, origin, index) {
+            if (origin === 'source') {
+                // Find first empty target slot
+                const emptyIdx = targetSlots.findIndex(slot => slot === null);
+                if (emptyIdx !== -1) {
+                    sourceMissions = sourceMissions.filter(m => m.id !== mission.id);
+                    targetSlots[emptyIdx] = mission;
+                    renderBoard();
+                } else {
+                    showMessage("ช่องเรียงลำดับเต็มแล้ว!", "error");
+                }
+            } else {
+                // Move back from target to source
+                targetSlots[index] = null;
+                sourceMissions.push(mission);
+                renderBoard();
+            }
+        }
+
+        function checkAnswer() {
+            // Check if all 4 slots are filled
+            if (targetSlots.some(slot => slot === null)) {
+                showMessage("กรุณาเรียงการ์ดให้ครบทั้ง 4 ด่านก่อนตรวจสอบลำดับ", "warning");
+                return;
+            }
+
+            // Verify correctness based on correctStep (1, 2, 3, 4)
+            let isCorrect = true;
+            for (let i = 0; i < 4; i++) {
+                if (targetSlots[i].correctStep !== i + 1) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                score += 100;
+                document.getElementById('score-display').innerText = score;
+                document.getElementById('success-modal').classList.remove('hidden');
+            } else {
+                showMessage("ลำดับยังไม่ถูกต้อง! ลองคิดดูว่านักบินต้องทำอะไรก่อนขึ้นจรวดและก่อนปล่อยจรวด", "error");
+            }
+        }
+
+        function showMessage(text, type) {
+            const box = document.getElementById('message-box');
+            const icon = document.getElementById('msg-icon');
+            const msgText = document.getElementById('msg-text');
+
+            box.classList.remove('hidden');
+            msgText.innerText = text;
+
+            if (type === 'error') {
+                box.className = "mt-4 p-4 rounded-xl text-sm font-medium flex items-center gap-3 bg-red-500/20 border border-red-500/40 text-red-300";
+                icon.className = "fa-solid fa-triangle-exclamation text-red-400 text-lg";
+            } else {
+                box.className = "mt-4 p-4 rounded-xl text-sm font-medium flex items-center gap-3 bg-amber-500/20 border border-amber-500/40 text-amber-300";
+                icon.className = "fa-solid fa-circle-info text-amber-400 text-lg";
+            }
+
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 5000);
+        }
+
+        function hideMessage() {
+            document.getElementById('message-box').classList.add('hidden');
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            initGame();
+        };
+    </script>
+</body>
+</html>
